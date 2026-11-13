@@ -17,7 +17,7 @@ section{background:#fff;border:1px solid var(--line);border-radius:10px;padding:
 section h2{margin:0 0 4px;font-size:18px}.lead{margin:0 0 12px;color:var(--muted)}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 .kpi span{display:block;font-size:12px;color:var(--muted)}.kpi strong{font-size:22px}
-.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-weight:700;color:#fff}
+.kpi span.badge{display:inline-block;padding:2px 12px;border-radius:99px;font-weight:700;color:#fff;font-size:16px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .chart{height:320px}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
 th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:600}ul{margin:6px 0;padding-left:20px}
@@ -168,7 +168,7 @@ function update(){labels();const{rate,mde,a}=read();const P=pnl(rate,a);const ba
     {...LAY,title:{text:"Adoption by cashback rate",font:{size:14}},xaxis:{title:"Cashback rate (%)"},yaxis:{title:"Adoption (% of base)",ticksuffix:"%"},shapes:[vl]},CFG);
   Plotly.react("c-contrib",[{x,y:sweep.map(s=>s.contribution),mode:"lines",line:{color:"#2563eb",width:2},hovertemplate:"%{x:.1f}% cashback<br>%{y:,.0f}<extra></extra>"},
     {x:[best*100],y:[sweep[bi].contribution],mode:"markers+text",marker:{size:9,color:"#15803d"},text:["Best "+pct(best)],textposition:"top center",hoverinfo:"skip"}],
-    {...LAY,title:{text:"12-month contribution by cashback rate",font:{size:14}},xaxis:{title:"Cashback rate (%)"},yaxis:{title:"Contribution",zeroline:true,zerolinecolor:"#94a3b8"},shapes:[vl]},CFG);
+    {...LAY,margin:{...LAY.margin,t:60},title:{text:"12-month contribution by cashback rate",font:{size:14}},xaxis:{title:"Cashback rate (%)"},yaxis:{title:"Contribution",zeroline:true,zerolinecolor:"#94a3b8"},shapes:[vl]},CFG);
   const be=sweep.findIndex((s,i)=>i>bi&&s.contribution<0);
   $("pricing-lead").textContent=`Adoption keeps rising with cashback, but profit does not. Contribution peaks at ${pct(best)} and ${be>0?"turns negative from "+pct(RATES[be]):"stays positive across the range"}: above the peak, each extra point of cashback costs more than the interchange it brings in.`;
   const T=P.tot,names=["Interchange","Deposit halo","Cashback","Cannibalisation","Servicing","Issuance","Acquisition"],vals=[T.interchange,T.deposit_halo,T.cashback,T.cannibalisation,T.servicing,T.issuance,T.acquisition];
