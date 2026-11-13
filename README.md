@@ -1,5 +1,7 @@
 # GTM Launch Simulator
 
+**[Open the live dashboard](https://zeeshan9595.github.io/gtm-launch-simulator/)**: customer-base analytics, pricing curve, 12-month P&L, segment economics, launch test design and the launch strategy, all interactive.
+
 Should a fintech launch a cashback debit card to its existing customers, and at what cashback rate?
 
 This project answers that on a simulated 100,000-user multi-product base. It models adoption, unit economics, cannibalisation of existing fee revenue, the deposit "halo", and the size of the target vs control test needed before rollout. A rule-based memo then returns Go, Conditional Go or No-Go.
