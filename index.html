@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GTM Launch Simulator: cashback card launch</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+:root{--ink:#0f172a;--muted:#475569;--line:#e2e8f0;--bg:#f8fafc;--blue:#2563eb;--green:#15803d;--red:#b91c1c;--amber:#b45309}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+header{background:#fff;border-bottom:1px solid var(--line);padding:24px 20px}header h1{margin:0 0 4px;font-size:24px}header p{margin:0;color:var(--muted);max-width:820px}
+.wrap{display:grid;grid-template-columns:270px 1fr;gap:20px;max-width:1280px;margin:0 auto;padding:20px}
+aside{position:sticky;top:12px;align-self:start;background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px}
+aside h3{margin:14px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}aside h3:first-child{margin-top:0}
+label{display:block;font-size:13px;margin:8px 0 2px}label b{float:right}input[type=range]{width:100%}
+section{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:20px}
+section h2{margin:0 0 4px;font-size:18px}.lead{margin:0 0 12px;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.kpi span{display:block;font-size:12px;color:var(--muted)}.kpi strong{font-size:22px}
+.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-weight:700;color:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.chart{height:320px}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-weight:600}ul{margin:6px 0;padding-left:20px}
+.note{font-size:13px;color:var(--muted)}footer{max-width:1280px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:13px}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}aside{position:static}.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<h1>Should we launch a cashback debit card, and at what rate?</h1>
+<p>Analytics and launch strategy for a cashback debit card offered to a simulated base of 100,000 users of a multi-product fintech (deposits, BNPL, P2P transfers, merchant QR). Move the sliders to test the case. <b>All data is synthetic and all assumptions are illustrative.</b></p>
+</header>
+<div class="wrap">
+<aside>
+<h3>Offer</h3>
+<label>Cashback rate <b id="v-rate"></b></label><input id="rate" type="range" min="0" max="2.5" step="0.1" value="1.0">
+<label>Cashback cap per month <b id="v-cap"></b></label><input id="cap" type="range" min="1" max="50" step="1" value="15">
+<h3>Assumptions</h3>
+<label>Interchange rate <b id="v-ir"></b></label><input id="ir" type="range" min="0.2" max="2" step="0.1" value="1.2">
+<label>Cannibalisation of existing fees <b id="v-can"></b></label><input id="can" type="range" min="0" max="50" step="5" value="15">
+<label>Deposit balance uplift <b id="v-halo"></b></label><input id="halo" type="range" min="0" max="20" step="1" value="8">
+<label>Monthly card churn <b id="v-churn"></b></label><input id="churn" type="range" min="0" max="10" step="0.5" value="3">
+<h3>Launch test</h3>
+<label>Minimum detectable lift <b id="v-mde"></b></label><input id="mde" type="range" min="0.5" max="5" step="0.5" value="2">
+<p class="note">Defaults reproduce the Python engine in the repository to within about 0.3% of interchange revenue.</p>
+</aside>
+<main>
+<section>
+<h2 id="headline"></h2><p class="lead" id="headline-sub"></p>
+<div class="kpis">
+<div class="kpi"><span>Decision</span><strong id="k-dec"></strong></div>
+<div class="kpi"><span>Expected adopters</span><strong id="k-ad"></strong></div>
+<div class="kpi"><span>12-month contribution</span><strong id="k-con"></strong></div>
+<div class="kpi"><span>Payback</span><strong id="k-pay"></strong></div>
+<div class="kpi"><span>LTV to CAC</span><strong id="k-ltv"></strong></div>
+</div>
+</section>
+
+<section>
+<h2>1. The customer base</h2>
+<p class="lead">10% of users are affluent but hold 70% of deposit balances. Users with more products are far less likely to churn, which is why cross-sell matters.</p>
+<div class="grid3"><div id="c-value" class="chart"></div><div id="c-pen" class="chart"></div><div id="c-churn" class="chart"></div></div>
+<table id="t-seg"></table>
+</section>
+
+<section>
+<h2>2. Pricing: adoption and profit by cashback rate</h2>
+<p class="lead" id="pricing-lead"></p>
+<div class="grid2"><div id="c-adopt" class="chart"></div><div id="c-contrib" class="chart"></div></div>
+</section>
+
+<section>
+<h2>3. Twelve-month profit and loss</h2>
+<p class="lead" id="pnl-lead"></p>
+<div class="grid2"><div id="c-water" class="chart"></div><div id="c-cum" class="chart"></div></div>
+</section>
+
+<section>
+<h2>4. Segment economics</h2>
+<p class="lead" id="seg-lead"></p>
+<div class="grid2"><div id="c-seg" class="chart"></div><div><table id="t-segpnl"></table></div></div>
+</section>
+
+<section>
+<h2>5. Launch test design</h2>
+<p class="lead" id="test-lead"></p>
+<table id="t-test"></table>
+</section>
+
+<section>
+<h2>6. Strategy and recommendation</h2>
+<p class="lead" id="strat-lead"></p>
+<div class="grid2">
+<div><h3>Blanket rate vs segment-targeted rates</h3><table id="t-strat"></table><p class="note">Targeted rates are the profit-maximising rate for each segment on its own.</p></div>
+<div><h3>Decision checks at the selected rate</h3><table id="t-checks"></table></div>
+</div>
+<h3>Recommended launch plan</h3>
+<ol id="plan"></ol>
+<h3>Kill criteria</h3>
+<ul id="kill"></ul>
+</section>
+</main>
+</div>
+<footer>Synthetic data generated in Python; method, code and tests in the <a href="https://github.com/zeeshan9595/gtm-launch-simulator">GitHub repository</a>. Built by Zeeshan Azeem Khalid. Not real company, customer or market data.</footer>
+
+<script id="engine">
+const D={"groups":[{"s":"affluent","k":0,"n":41,"sp":36403,"fe":0.0,"bal":0.0,"ch":[14,16,11]},{"s":"affluent","k":1,"n":591,"sp":536475,"fe":503.6,"bal":1575922.0,"ch":[273,170,148]},{"s":"affluent","k":2,"n":3057,"sp":2704173,"fe":6335.8,"bal":12936753.0,"ch":[1391,933,733]},{"s":"affluent","k":3,"n":4977,"sp":4396514,"fe":17158.4,"bal":24366768.0,"ch":[2284,1508,1185]},{"s":"affluent","k":4,"n":1377,"sp":1214025,"fe":5227.7,"bal":6806093.0,"ch":[584,429,364]},{"s":"engaged","k":0,"n":286,"sp":95097,"fe":0.0,"bal":0.0,"ch":[109,100,77]},{"s":"engaged","k":1,"n":3535,"sp":1298489,"fe":2847.7,"bal":369237.0,"ch":[1587,1083,865]},{"s":"engaged","k":2,"n":10829,"sp":3941578,"fe":13897.2,"bal":4400153.0,"ch":[4902,3174,2753]},{"s":"engaged","k":3,"n":11728,"sp":4240037,"fe":19931.2,"bal":7568674.0,"ch":[5291,3605,2832]},{"s":"engaged","k":4,"n":3735,"sp":1353316,"fe":7407.4,"bal":2911863.0,"ch":[1674,1130,931]},{"s":"mass","k":0,"n":6768,"sp":925798,"fe":0.0,"bal":0.0,"ch":[3051,2024,1693]},{"s":"mass","k":1,"n":24416,"sp":3313210,"fe":6323.2,"bal":808579.0,"ch":[10892,7235,6289]},{"s":"mass","k":2,"n":21342,"sp":2913212,"fe":9025.6,"bal":2379487.0,"ch":[9756,6292,5294]},{"s":"mass","k":3,"n":6677,"sp":904812,"fe":3748.8,"bal":1184597.0,"ch":[3054,1984,1639]},{"s":"mass","k":4,"n":641,"sp":82922,"fe":413.1,"bal":138807.0,"ch":[296,187,158]}],"seg":[{"segment":"affluent","users":10043,"deposit":0.903,"bnpl":0.257,"p2p":0.847,"qr":0.696,"products":2.703,"balance":4548.993,"fees":2.91,"spend":884.954,"churn":0.154,"tenure":30.402},{"segment":"engaged","users":30113,"deposit":0.651,"bnpl":0.35,"p2p":0.902,"qr":0.597,"products":2.501,"balance":506.423,"fees":1.464,"spend":362.917,"churn":0.164,"tenure":30.585},{"segment":"mass","users":59844,"deposit":0.349,"bnpl":0.15,"p2p":0.701,"qr":0.298,"products":1.499,"balance":75.387,"fees":0.326,"spend":136.02,"churn":0.214,"tenure":30.563}],"chan":{"organic":45158,"paid":29870,"cross_sell":24972},"prod":{"0":7095,"1":28542,"2":35228,"3":23382,"4":5753},"churnK":{"0":0.289,"1":0.239,"2":0.189,"3":0.139,"4":0.091}};
+const SEGS=["affluent","engaged","mass"];
+const CURVE={mass:[0.30,0.010,350],engaged:[0.50,0.008,400],affluent:[0.40,0.006,300]};
+const ACQ=[1,6,2]; // organic, paid, cross-sell
+const DEFAULTS={ir:0.012,cap:15,can:0.15,halo:0.08,nim:0.03,serv:0.40,iss:3.00,churn:0.03,lift:0.10,months:12};
+function invNorm(p){const a=[-39.6968302866538,220.946098424521,-275.928510446969,138.357751867269,-30.6647980661472,2.50662827745924],b=[-54.4760987982241,161.585836858041,-155.698979859887,66.8013118877197,-13.2806815528857],c=[-0.00778489400243029,-0.322396458041136,-2.40075827716184,-2.54973253934373,4.37466414146497,2.93816398269878],d=[0.00778469570904146,0.32246712907004,2.445134137143,3.75440866190742],pl=0.02425;let q,r;
+if(p<pl){q=Math.sqrt(-2*Math.log(p));return(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1)}
+if(p>1-pl){q=Math.sqrt(-2*Math.log(1-p));return-(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1)}
+q=p-0.5;r=q*q;return(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1)}
+// Card spend is lognormal(0, 0.5) around each group's mean: 100 quantile points, rescaled to mean 1.
+const SHAPE=(()=>{const s=[];for(let i=0;i<100;i++)s.push(Math.exp(0.5*invNorm((i+0.5)/100)));const m=s.reduce((x,y)=>x+y)/100;return s.map(x=>x/m)})();
+function adoption(seg,k,rate){const[c,m,st]=CURVE[seg];return Math.min(Math.max(c/(1+Math.exp(-st*(rate-m)))*(0.7+0.15*k),0),0.95)}
+function pnl(rateOf,a){ // rateOf: number, or {segment: rate}; returns totals for the whole base
+  const surv=[];for(let t=0;t<a.months;t++)surv.push(Math.pow(1-a.churn,t));const am=surv.reduce((x,y)=>x+y);
+  const tot={interchange:0,deposit_halo:0,cashback:0,cannibalisation:0,servicing:0,issuance:0,acquisition:0};const bySeg={};let ad=0,n=0,rec1=0;
+  for(const g of D.groups){const r=typeof rateOf==="number"?rateOf:rateOf[g.s];const p=adoption(g.s,g.k,r);const lift=1+a.lift*r*100;const mean=g.sp/g.n;
+    let cb=0;for(const s of SHAPE)cb+=Math.min(mean*s*lift*r,a.cap);cb=cb/100*g.n;
+    const m={interchange:g.sp*lift*a.ir,deposit_halo:g.bal*a.halo*a.nim/12,cashback:-cb,cannibalisation:-g.fe*a.can,servicing:-g.n*a.serv};
+    const one={issuance:-g.n*a.iss,acquisition:-(g.ch[0]*ACQ[0]+g.ch[1]*ACQ[1]+g.ch[2]*ACQ[2])};
+    const S=bySeg[g.s]||(bySeg[g.s]={users:0,adopters:0,contribution:0,halo:0,cannibal:0});
+    for(const key in m){tot[key]+=p*m[key]*am;rec1+=p*m[key];S.contribution+=p*m[key]*am}
+    for(const key in one){tot[key]+=p*one[key];S.contribution+=p*one[key]}
+    S.users+=g.n;S.adopters+=p*g.n;S.halo+=p*m.deposit_halo*am;S.cannibal+=p*m.cannibalisation*am;ad+=p*g.n;n+=g.n}
+  const oneOff=tot.issuance+tot.acquisition;const cum=[];let run=oneOff;for(const s of surv){run+=rec1*s;cum.push(run)}
+  const contribution=Object.values(tot).reduce((x,y)=>x+y);const idx=cum.findIndex(v=>v>=0);
+  const ltv=(contribution-oneOff)/ad,cac=-oneOff/ad;
+  return{tot,bySeg,adopters:ad,users:n,adoptionRate:ad/n,contribution,cum,payback:idx<0?null:idx+1,ltvCac:cac?ltv/cac:Infinity}}
+const RATES=Array.from({length:26},(_,i)=>i/1000);
+function bestRate(a,seg){let best=0,val=-Infinity;for(const r of RATES){const v=seg?pnl(r,a).bySeg[seg].contribution:pnl(r,a).contribution;if(v>val){val=v;best=r}}return best}
+function sampleSize(p1,mde){const z=1.959964+0.841621,p2=p1+mde;return Math.ceil(z*z*(p1*(1-p1)+p2*(1-p2))/(mde*mde))}
+function decide(P,need){const c={};const share=Math.abs(P.tot.cannibalisation)/P.tot.interchange;
+  c["Contribution positive over 12 months"]=P.contribution>0;c["Payback within 12 months"]=P.payback!==null&&P.payback<=12;
+  c["LTV to CAC at least 3.0"]=P.ltvCac>=3;c["Cannibalisation below 50% of interchange"]=share<=0.5;c["Base large enough for the launch test"]=2*need<=P.users;
+  const passed=Object.values(c).filter(Boolean).length;const d=passed===5?"GO":(c["Contribution positive over 12 months"]&&passed>=3?"CONDITIONAL GO":"NO-GO");return{d,c,share}}
+</script>
+<script>
+const $=id=>document.getElementById(id);const fmt=v=>Math.round(v).toLocaleString("en-GB");const pct=(v,d=1)=>(v*100).toFixed(d)+"%";
+const COL={affluent:"#2563eb",engaged:"#ea580c",mass:"#64748b"};const LAY={margin:{t:40,r:10,b:40,l:55},font:{family:"system-ui",size:12},paper_bgcolor:"#fff",plot_bgcolor:"#fff",showlegend:false};
+const CFG={displayModeBar:false,responsive:true};
+function read(){const v=id=>parseFloat($(id).value);return{rate:v("rate")/100,mde:v("mde")/100,a:{...DEFAULTS,ir:v("ir")/100,cap:v("cap"),can:v("can")/100,halo:v("halo")/100,churn:v("churn")/100}}}
+function labels(){$("v-rate").textContent=$("rate").value+"%";$("v-cap").textContent=$("cap").value;$("v-ir").textContent=$("ir").value+"%";$("v-can").textContent=$("can").value+"%";
+  $("v-halo").textContent=$("halo").value+"%";$("v-churn").textContent=$("churn").value+"%";$("v-mde").textContent=$("mde").value+" pts"}
+function table(id,head,rows){$(id).innerHTML="<tr>"+head.map(h=>"<th>"+h+"</th>").join("")+"</tr>"+rows.map(r=>"<tr>"+r.map(c=>"<td>"+c+"</td>").join("")+"</tr>").join("")}
+function baseCharts(){const S=D.seg,tu=S.reduce((x,s)=>x+s.users,0),tb=S.reduce((x,s)=>x+s.users*s.balance,0),ts=S.reduce((x,s)=>x+s.users*s.spend,0);
+  Plotly.newPlot("c-value",["Users","Deposit balances","Card spend"].map((m,i)=>({type:"bar",name:m,x:S.map(s=>s.segment),y:S.map(s=>[s.users/tu,s.users*s.balance/tb,s.users*s.spend/ts][i]*100),
+    marker:{color:["#94a3b8","#2563eb","#15803d"][i]},hovertemplate:"%{x}<br>"+m+": %{y:.0f}%<extra></extra>"})),{...LAY,showlegend:true,legend:{orientation:"h",y:-0.15},title:{text:"Share of users and value",font:{size:14}},yaxis:{title:"% of total",ticksuffix:"%"}},CFG);
+  const pr=[["Deposit","deposit"],["BNPL","bnpl"],["P2P","p2p"],["Merchant QR","qr"]];
+  Plotly.newPlot("c-pen",S.map(s=>({type:"bar",name:s.segment,x:pr.map(p=>p[0]),y:pr.map(p=>s[p[1]]*100),marker:{color:COL[s.segment]},hovertemplate:s.segment+"<br>%{x}: %{y:.0f}%<extra></extra>"})),
+    {...LAY,showlegend:true,legend:{orientation:"h",y:-0.15},title:{text:"Product holding by segment",font:{size:14}},yaxis:{title:"% holding",ticksuffix:"%"}},CFG);
+  const ks=Object.keys(D.churnK);Plotly.newPlot("c-churn",[{type:"bar",x:ks,y:ks.map(k=>D.churnK[k]*100),marker:{color:"#b91c1c"},text:ks.map(k=>(D.churnK[k]*100).toFixed(0)+"%"),textposition:"outside",hovertemplate:"%{x} products<br>%{y:.1f}% churn risk<br>"+"<extra></extra>"}],
+    {...LAY,title:{text:"Churn risk by products held",font:{size:14}},xaxis:{title:"Products held"},yaxis:{title:"Average churn risk",ticksuffix:"%",range:[0,35]}},CFG);
+  table("t-seg",["Segment","Users","Avg products","Avg deposit balance","Avg monthly spend","Avg fee revenue / month","Churn risk"],S.map(s=>[s.segment,fmt(s.users),s.products.toFixed(1),fmt(s.balance),fmt(s.spend),s.fees.toFixed(2),pct(s.churn,0)]))}
+function update(){labels();const{rate,mde,a}=read();const P=pnl(rate,a);const base=pnl(0,a).adoptionRate;const need=sampleSize(base,mde);const D2=decide(P,need);
+  const sweep=RATES.map(r=>pnl(r,a));const bi=sweep.reduce((b,s,i)=>s.contribution>sweep[b].contribution?i:b,0);const best=RATES[bi];
+  const colr={"GO":"#15803d","CONDITIONAL GO":"#b45309","NO-GO":"#b91c1c"}[D2.d];
+  $("headline").textContent=`At ${pct(rate)} cashback the launch is a ${D2.d}; contribution peaks at ${pct(best)}.`;
+  $("headline-sub").textContent=`${fmt(P.adopters)} of ${fmt(P.users)} users are expected to take the card, earning ${fmt(P.contribution)} over 12 months. The best rate in the sweep earns ${fmt(sweep[bi].contribution)}.`;
+  $("k-dec").innerHTML=`<span class="badge" style="background:${colr}">${D2.d}</span>`;$("k-ad").textContent=fmt(P.adopters)+" ("+pct(P.adoptionRate)+")";
+  $("k-con").textContent=fmt(P.contribution);$("k-con").style.color=P.contribution<0?"#b91c1c":"";$("k-pay").textContent=P.payback?"Month "+P.payback:"Not reached";$("k-ltv").textContent=P.ltvCac.toFixed(1);
+  const x=RATES.map(r=>r*100),vl={type:"line",x0:rate*100,x1:rate*100,yref:"paper",y0:0,y1:1,line:{dash:"dot",color:"#94a3b8"}};
+  Plotly.react("c-adopt",[{x,y:sweep.map(s=>s.adoptionRate*100),mode:"lines",line:{color:"#2563eb",width:2},hovertemplate:"%{x:.1f}% cashback<br>%{y:.1f}% adoption<extra></extra>"}],
+    {...LAY,title:{text:"Adoption by cashback rate",font:{size:14}},xaxis:{title:"Cashback rate (%)"},yaxis:{title:"Adoption (% of base)",ticksuffix:"%"},shapes:[vl]},CFG);
+  Plotly.react("c-contrib",[{x,y:sweep.map(s=>s.contribution),mode:"lines",line:{color:"#2563eb",width:2},hovertemplate:"%{x:.1f}% cashback<br>%{y:,.0f}<extra></extra>"},
+    {x:[best*100],y:[sweep[bi].contribution],mode:"markers+text",marker:{size:9,color:"#15803d"},text:["Best "+pct(best)],textposition:"top center",hoverinfo:"skip"}],
+    {...LAY,title:{text:"12-month contribution by cashback rate",font:{size:14}},xaxis:{title:"Cashback rate (%)"},yaxis:{title:"Contribution",zeroline:true,zerolinecolor:"#94a3b8"},shapes:[vl]},CFG);
+  const be=sweep.findIndex((s,i)=>i>bi&&s.contribution<0);
+  $("pricing-lead").textContent=`Adoption keeps rising with cashback, but profit does not. Contribution peaks at ${pct(best)} and ${be>0?"turns negative from "+pct(RATES[be]):"stays positive across the range"}: above the peak, each extra point of cashback costs more than the interchange it brings in.`;
+  const T=P.tot,names=["Interchange","Deposit halo","Cashback","Cannibalisation","Servicing","Issuance","Acquisition"],vals=[T.interchange,T.deposit_halo,T.cashback,T.cannibalisation,T.servicing,T.issuance,T.acquisition];
+  Plotly.react("c-water",[{type:"waterfall",x:[...names,"Contribution"],y:[...vals,0],measure:[...vals.map(()=>"relative"),"total"],increasing:{marker:{color:"#15803d"}},decreasing:{marker:{color:"#b91c1c"}},totals:{marker:{color:"#2563eb"}},connector:{line:{color:"#cbd5e1"}},hovertemplate:"%{x}<br>%{y:,.0f}<extra></extra>"}],
+    {...LAY,title:{text:"What builds and erodes contribution",font:{size:14}},yaxis:{title:"12-month amount"}},CFG);
+  Plotly.react("c-cum",[{x:P.cum.map((_,i)=>i+1),y:P.cum,mode:"lines+markers",line:{color:"#2563eb",width:2},marker:{size:7},hovertemplate:"Month %{x}<br>%{y:,.0f}<extra></extra>"}],
+    {...LAY,title:{text:"Cumulative contribution of the launch cohort",font:{size:14}},xaxis:{title:"Month",dtick:1},yaxis:{title:"Cumulative",zeroline:true,zerolinecolor:"#94a3b8"}},CFG);
+  $("pnl-lead").textContent=`Cashback costs ${fmt(-T.cashback)}, ${pct(-T.cashback/T.interchange,0)} of the ${fmt(T.interchange)} interchange it generates. ${P.payback?"The launch cohort pays back in month "+P.payback+".":"The launch cohort does not pay back within 12 months."}`;
+  const B=P.bySeg;Plotly.react("c-seg",[{type:"bar",name:"Deposit halo",x:SEGS,y:SEGS.map(s=>B[s].halo),marker:{color:"#15803d"},hovertemplate:"%{x}<br>Halo %{y:,.0f}<extra></extra>"},
+    {type:"bar",name:"Cannibalisation",x:SEGS,y:SEGS.map(s=>B[s].cannibal),marker:{color:"#b91c1c"},hovertemplate:"%{x}<br>Cannibalisation %{y:,.0f}<extra></extra>"},
+    {type:"bar",name:"Contribution",x:SEGS,y:SEGS.map(s=>B[s].contribution),marker:{color:"#2563eb"},hovertemplate:"%{x}<br>Contribution %{y:,.0f}<extra></extra>"}],
+    {...LAY,showlegend:true,legend:{orientation:"h",y:-0.15},barmode:"group",title:{text:"Halo, cannibalisation and contribution by segment",font:{size:14}},yaxis:{title:"12-month amount"}},CFG);
+  table("t-segpnl",["Segment","Adoption","Contribution","Per adopter"],SEGS.map(s=>[s,pct(B[s].adopters/B[s].users),fmt(B[s].contribution),(B[s].contribution/B[s].adopters).toFixed(2)]));
+  const prof=SEGS.filter(s=>B[s].contribution>0);$("seg-lead").textContent=prof.length===3?"Every segment is profitable at this rate.":prof.length?`At this rate only ${prof.join(" and ")} ${prof.length>1?"are":"is"} profitable. Deposit halo is what carries the affluent segment.`:"No segment is profitable at this rate.";
+  $("test-lead").textContent=`Before full rollout, run target vs control. With ${pct(base)} baseline adoption and no cashback, detecting a ${(mde*100).toFixed(1)}-point lift needs ${fmt(need)} users per group (5% significance, 80% power).`;
+  table("t-test",["Item","Value"],[["Baseline adoption (no cashback)",pct(base)],["Detectable lift",(mde*100).toFixed(1)+" points"],["Users per group",fmt(need)],["Share of base in the test",pct(2*need/P.users)],
+    ["Randomisation","By user, 50/50, checked for sample ratio mismatch on day 2"],["Primary metric","Card adoption within 30 days"],["Guardrails","Existing fee revenue per user; deposit balances; complaints"]]);
+  const tr={};for(const s of SEGS)tr[s]=bestRate(a,s);const TP=pnl(tr,a),BP=sweep[bi];
+  table("t-strat",["Plan","Rates","Adopters","Contribution"],[["Selected blanket rate",pct(rate),fmt(P.adopters),fmt(P.contribution)],["Best blanket rate",pct(best),fmt(BP.adopters),fmt(BP.contribution)],
+    ["Segment-targeted",SEGS.map(s=>s[0].toUpperCase()+s.slice(1)+" "+pct(tr[s])).join(", "),fmt(TP.adopters),fmt(TP.contribution)]]);
+  const gain=TP.contribution-BP.contribution;
+  $("strat-lead").textContent=`Recommendation: launch at about ${pct(best)} rather than a headline-grabbing rate, and tailor by segment. Targeted rates add ${fmt(gain)} (${pct(gain/Math.abs(BP.contribution||1))}) over the best blanket rate. The bigger risk is pricing too high, not too low.`;
+  table("t-checks",["Check","Result"],Object.entries(D2.c).map(([k,v])=>[k,v?'<b style="color:#15803d">Pass</b>':'<b style="color:#b91c1c">Fail</b>']));
+  $("plan").innerHTML=[`<b>Wave 1, weeks 1-6:</b> target vs control test at ${pct(best)} with ${fmt(sampleSize(base,mde))} users per group, drawn from engaged and affluent users who already hold a deposit.`,
+    `<b>Wave 2, weeks 7-12:</b> if adoption lift is significant and guardrails hold, open to all affluent and engaged users at their targeted rates.`,
+    `<b>Wave 3, from week 13:</b> offer mass-market users the lower ${pct(tr.mass)} rate, bundled with a deposit prompt, since a second product cuts churn risk from ${pct(D.churnK[1],0)} to ${pct(D.churnK[2],0)}.`,
+    `<b>Throughout:</b> measure cannibalisation and deposit halo directly against the control group and re-run this model with the measured values.`].map(t=>"<li>"+t+"</li>").join("");
+  $("kill").innerHTML=["No significant lift in adoption versus control at the end of wave 1.","The sample ratio check fails: fix assignment before reading any result.",
+    `Measured cannibalisation above ${pct(Math.max(a.can*2,0.3),0)} of existing fee revenue, double the planning assumption.`,"Card churn in the first three months above "+pct(a.churn,1)+" a month."].map(t=>"<li>"+t+"</li>").join("")}
+document.querySelectorAll("input[type=range]").forEach(el=>el.addEventListener("input",update));
+baseCharts();update();
+</script>
+</body>
+</html>
